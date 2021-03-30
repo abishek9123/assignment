@@ -1,4 +1,6 @@
 import json
+import os
+import glob
 
 from pyspark import SparkContext, SparkConf, SQLContext
 
@@ -28,5 +30,25 @@ def remove_duplicates(file_name):
 	return result_df
 	
 
-output_df = remove_duplicates('data.json')
-#output_df.write.parquet('result.parquet')
+# Reading the files and then archiving the files
+input_dir = '/input_folder/'
+archive_folder = '/archive/'
+final_output_folder='/parquet/'
+json_pattern = os.path.join(input_dir, '*.json')
+file_list = glob.glob(json_pattern)
+
+for file in file_list:
+	# Calling remove_Duplicates
+	output_df = remove_duplicates(file)
+	
+	# Getting File Name
+	file_path = file.split('/')
+	file_name=file_path[-1].split('.')
+	file_parquet=file_name[0]+'.parquet'
+	file_json=file_name[0]+'.json'
+	
+	# writing the data into parquet
+	output_df.repartition(1).write.mode('overwrite').parquet(final_output_folder+file_parquet)
+	
+	#archive the processed file into another path
+	os.rename(file, archive_folder+file_json)
